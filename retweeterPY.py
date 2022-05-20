@@ -7,28 +7,6 @@ import sqlite3 as sl
 
 print("[" + str(datetime.now()) +  "] Begin.", flush=True)
 
-def getKeywords(screen_name):
-	return ['mets']
-	
-def retweet(screen_name, tweetId):
-	print("retweeting! screen_name: [" + str(screen_name) + "] tweetId : [" + str(tweetId) + "]")
-
-def processTweet(tweet):
-	tweetText = re.sub(r'http\S+', '', tweet.text)
-	print("tweet id: [" + str(tweet.id) + "] tweet: [" + str(tweetText) + "]")
-	for screen_name in accountList:
-		print("Processing: [" + str(screen_name) + "] tweetText : [" + tweetText + "]")
-		consumer_key= accountList[screen_name]['consumer_key']
-		consumer_secret= accountList[screen_name]['consumer_secret']
-		access_token= accountList[screen_name]['access_token']
-		access_token_secret= accountList[screen_name]['access_token_secret']
-		bearer_token= accountList[screen_name]['bearer_token']
-		keywordList = getKeywords(screen_name)
-		for keyword in keywordList:
-			if keyword in tweetText:
-				print("Found the keyword [" + keyword + "] in [" + tweetText + "], retweet this motha!")
-				retweet(screen_name, tweet.id)
-
 #load config
 print("[" + str(datetime.now()) +  "] Loading variables...", flush=True)
 accountList = {}
@@ -38,49 +16,101 @@ for envVar in os.environ:
 		if envVar[0:envVar.index('.')] not in accountList:
 			accountList[envVar[0:envVar.index('.')]] = {}
 		accountList[envVar[0:envVar.index('.')]][envVar[envVar.index('.') + 1:]] = os.getenv(envVar)
+
+accountsToWatch = ['JTKirkmanWF', 'WFSly', 'WilsonWildingWF']
+mainScreenName = 'TheWorstFans'
+mainConsumerKey= accountList[mainScreenName]['consumer_key']
+mainConsumerSecret= accountList[mainScreenName]['consumer_secret']
+mainAccessToken= accountList[mainScreenName]['access_token']
+mainAccessToken_secret= accountList[mainScreenName]['access_token_secret']
+mainBearerToken= accountList[mainScreenName]['bearer_token']
+
+def getKeywords():
+	with open('/var/scripts/retweeterPY/.keywords') as file:
+		for line in file:
+			if not line.startswith('#'):
+				line = line.rstrip()
+				#print("getKeywords : " + line)
+				screen_name = line[0:line.index('=')]
+				#print("screen_name: [" + screen_name + "]")
+				keyword = line[line.index('=') + 1:len(line)]
+				#print("keyword: [" + keyword + "]")
+				keywordList = []
+				if 'keywordList' in accountList[screen_name]:
+					keywordList = accountList[screen_name]['keywordList']
+				keywordList.append(keyword)
+				accountList[screen_name]['keywordList'] = keywordList
+	
+def retweetAndLike(screen_name, tweetId):
+	consumer_key = accountList[screen_name]['consumer_key']
+	consumer_secret = accountList[screen_name]['consumer_secret']
+	access_token = accountList[screen_name]['access_token']
+	access_token_secret = accountList[screen_name]['access_token_secret']
+	bearer_token = accountList[screen_name]['bearer_token']
+	client = tweepy.Client(bearer_token=bearer_token, 
+							consumer_key=consumer_key, 
+							consumer_secret=consumer_secret, 
+							access_token=access_token, 
+							access_token_secret=access_token_secret)
+	print("retweeting! screen_name: [" + str(screen_name) + "] tweetId : [" + str(tweetId) + "]")
+	client.retweet(tweetId)
+	client.like(tweetId)
+
+def processTweet(tweet):
+	tweetText = re.sub(r'http\S+', '', tweet.text)
+	#print("tweet id: [" + str(tweet.id) + "] tweet: [" + str(tweetText) + "] accountList: [" + str(accountList) + "]")
+	for screen_name in accountList:
+		if 'keywordList' in accountList[screen_name]:
+			keywordList = accountList[screen_name]['keywordList']
+			for keyword in keywordList:
+				print("Processing: [" + str(screen_name) + "] keyword : [" + keyword + "] tweetText : [" + tweetText + "]")
+				if keyword.lower() in tweetText:
+					print("Found the keyword [" + keyword + "] in [" + tweetText + "], retweet this motha!")
+					retweetAndLike(screen_name, tweet.id)
+
+getKeywords()
 #setup db
 con = sl.connect(os.getenv('db_path'))
 sql = "create table if not exists users_latestest_tweet (screen_name text, last_tweet_id text)"
 cur = con.cursor()
 cur.execute(sql)
 #retrieve tweets from specified accounts
-for screen_name in accountList:
-	print("Processing: [" + str(screen_name) + "]")
-	consumer_key= accountList[screen_name]['consumer_key']
-	consumer_secret= accountList[screen_name]['consumer_secret']
-	access_token= accountList[screen_name]['access_token']
-	access_token_secret= accountList[screen_name]['access_token_secret']
-	bearer_token= accountList[screen_name]['bearer_token']
+for accountToWatch in accountsToWatch:
+	print("Processing: [" + str(accountToWatch) + "]")
 	#set up API connection
 	print("[" + str(datetime.now()) +  "] Setting up API connection...", flush=True)
-	
-	client = tweepy.Client(bearer_token=bearer_token, 
-							consumer_key=consumer_key, 
-							consumer_secret=consumer_secret, 
-							access_token=access_token, 
-							access_token_secret=access_token_secret)
-	user_id = client.get_user(username = 'JTKirkmanWF')[0].id
-	last_tweet_id = 0
-	cur.execute("select last_tweet_id from users_latestest_tweet where screen_name = '" + screen_name + "'")
-	if len(cur.fetchall()) != 0:
-		last_tweet_id = cur.fetchall()[0]
-	print("last_tweet_id : [" + str(last_tweet_id) + "]")
-	pagination_token = None
+	client = tweepy.Client(bearer_token=mainBearerToken, 
+							consumer_key=mainConsumerKey, 
+							consumer_secret=mainConsumerSecret, 
+							access_token=mainAccessToken, 
+							access_token_secret=mainAccessToken_secret)
+	userId = client.get_user(username = accountToWatch)[0].id
+	lastTweetId = 0
+	cur.execute("select last_tweet_id from users_latestest_tweet where screen_name = '" + accountToWatch + "';")
+	result = cur.fetchall()
+	if len(result) != 0:
+		#print ("executed : [" + "select last_tweet_id from users_latestest_tweet where screen_name = '" + accountToWatch + "'" + "]")
+		#print("result : [" + str(result[0][0]) + "]")
+		lastTweetId = result[0][0]
+		#break
+	print("lastTweetId : [" + str(lastTweetId) + "]")
+	paginationToken = None
 	while True:
 		try:
-			tweets = client.get_users_tweets(user_id, exclude='replies', max_results=100, since_id=last_tweet_id, pagination_token=pagination_token)
-			print("loopin tweets: [" + str(tweets) + "]")
+			tweets = client.get_users_tweets(userId, exclude='replies', max_results=100, since_id=lastTweetId, pagination_token=paginationToken)
+			#print("loopin tweets: [" + str(tweets) + "]")
 			if tweets.data:
 				for tweet in tweets.data:
 					processTweet(tweet)
-					last_tweet_id = tweet.id
+					if int(tweet.id) > int(lastTweetId):
+						lastTweetId = tweet.id
 				if 'next_token' in tweets.meta:
-					pagination_token = tweets.meta['next_token']
+					paginationToken = tweets.meta['next_token']
 				else:
 					break
 			else:
 				print("Ran out of tweets")
-				sql = "INSERT INTO users_latestest_tweet (screen_name, last_tweet_id) values ('" + screen_name + "','" + str(last_tweet_id) + "')"
+				sql = "INSERT INTO users_latestest_tweet (screen_name, last_tweet_id) values ('" + accountToWatch + "','" + str(lastTweetId) + "')"
 				cur.execute(sql)
 				break
 		except tweepy.errors.TooManyRequests as e:
@@ -90,5 +120,7 @@ for screen_name in accountList:
 		except tweepy.errors.TweepyException as e:
 			print("[" + str(datetime.now()) +  "] Caught an exception: " + str(e), flush=True)
 			print("[" + str(datetime.now()) +  "] api_codes: " + str(e.api_codes), flush=True)
-	#check to see if tweet matches our config
-		#if so retweet
+#Clean up
+con.commit()
+cur.close()
+print("[" + str(datetime.now()) +  "] Fin.", flush=True)

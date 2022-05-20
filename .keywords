@@ -1,0 +1,4 @@
+#username=comma separated keywords list separated by newlines
+WorstFansFood=#food
+WorstFansMovies=#movies,#marvel,#starwars
+WorstFansMusic=#music

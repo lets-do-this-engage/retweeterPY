@@ -7,6 +7,28 @@ import sqlite3 as sl
 
 print("[" + str(datetime.now()) +  "] Begin.", flush=True)
 
+def getKeywords(screen_name):
+	return ['mets']
+	
+def retweet(screen_name, tweetId):
+	print("retweeting! screen_name: [" + str(screen_name) + "] tweetId : [" + str(tweetId) + "]")
+
+def processTweet(tweet):
+	tweetText = re.sub(r'http\S+', '', tweet.text)
+	print("tweet id: [" + str(tweet.id) + "] tweet: [" + str(tweetText) + "]")
+	for screen_name in accountList:
+		print("Processing: [" + str(screen_name) + "] tweetText : [" + tweetText + "]")
+		consumer_key= accountList[screen_name]['consumer_key']
+		consumer_secret= accountList[screen_name]['consumer_secret']
+		access_token= accountList[screen_name]['access_token']
+		access_token_secret= accountList[screen_name]['access_token_secret']
+		bearer_token= accountList[screen_name]['bearer_token']
+		keywordList = getKeywords(screen_name)
+		for keyword in keywordList:
+			if keyword in tweetText:
+				print("Found the keyword [" + keyword + "] in [" + tweetText + "], retweet this motha!")
+				retweet(screen_name, tweet.id)
+
 #load config
 print("[" + str(datetime.now()) +  "] Loading variables...", flush=True)
 accountList = {}
@@ -50,8 +72,7 @@ for screen_name in accountList:
 			print("loopin tweets: [" + str(tweets) + "]")
 			if tweets.data:
 				for tweet in tweets.data:
-					tweetText = re.sub(r'http\S+', '', tweet.text)
-					print("tweet id: [" + str(tweet.id) + "] tweet: [" + str(tweetText) + "]")
+					processTweet(tweet)
 					last_tweet_id = tweet.id
 				if 'next_token' in tweets.meta:
 					pagination_token = tweets.meta['next_token']

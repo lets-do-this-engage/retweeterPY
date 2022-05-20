@@ -1,0 +1,1 @@
+/var/scripts/retweeterPY/venv/bin/python /var/scripts/retweeterPY/retweeterPY.py > /var/scripts/retweeterPY/retweeterPY.log 2>&1

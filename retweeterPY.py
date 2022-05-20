@@ -56,17 +56,20 @@ def retweetAndLike(screen_name, tweetId):
 	client.retweet(tweetId)
 	client.like(tweetId)
 
-def processTweet(tweet):
-	tweetText = re.sub(r'http\S+', '', tweet.text)
-	#print("tweet id: [" + str(tweet.id) + "] tweet: [" + str(tweetText) + "] accountList: [" + str(accountList) + "]")
-	for screen_name in accountList:
-		if 'keywordList' in accountList[screen_name]:
-			keywordList = accountList[screen_name]['keywordList']
-			for keyword in keywordList:
-				print("Processing: [" + str(screen_name) + "] keyword : [" + keyword + "] tweetText : [" + tweetText + "]")
-				if keyword.lower() in tweetText:
-					print("Found the keyword [" + keyword + "] in [" + tweetText + "], retweet this motha!")
-					retweetAndLike(screen_name, tweet.id)
+def processTweet(userTweet, retweet):
+	tweets = [userTweet, retweet]
+	for tweet in tweets:
+		if tweet:
+			tweetText = re.sub(r'http\S+', '', tweet.text)
+			#print("tweet id: [" + str(tweet.id) + "] tweet: [" + str(tweetText) + "] accountList: [" + str(accountList) + "]")
+			for screen_name in accountList:
+				if 'keywordList' in accountList[screen_name]:
+					keywordList = accountList[screen_name]['keywordList']
+					for keyword in keywordList:
+						print("Processing: [" + str(screen_name) + "] keyword : [" + keyword + "] tweetText : [" + tweetText + "]")
+						if keyword.lower() in tweetText:
+							print("Found the keyword [" + keyword + "] in [" + tweetText + "], retweet this motha!")
+							retweetAndLike(screen_name, userTweet.id)
 
 getKeywords()
 #setup db
@@ -97,11 +100,20 @@ for accountToWatch in accountsToWatch:
 	paginationToken = None
 	while True:
 		try:
-			tweets = client.get_users_tweets(userId, exclude='replies', max_results=100, since_id=lastTweetId, pagination_token=paginationToken)
+			tweets = client.get_users_tweets(userId, exclude='replies', max_results=100, since_id=lastTweetId, pagination_token=paginationToken, tweet_fields=['referenced_tweets'])
 			#print("loopin tweets: [" + str(tweets) + "]")
 			if tweets.data:
 				for tweet in tweets.data:
-					processTweet(tweet)
+					#print("loopin tweet: [" + str(tweet) + "]")
+					#print("loopin referenced_tweets: [" + str(tweet.referenced_tweets) + "]")
+					retweet = None
+					if tweet.referenced_tweets:
+						print("this is a rt!! tweet.referenced_tweets : [" + str(tweet.referenced_tweets) + "]")
+						for referenced_tweet_id in tweet.referenced_tweets:
+							print("referenced_tweet_id : [" + str(referenced_tweet_id.id) + "]")
+							#processTweet(client.get_tweet(referenced_tweet_id.id))
+							retweet = client.get_tweet(referenced_tweet_id.id).data
+					processTweet(tweet, retweet)
 					if int(tweet.id) > int(lastTweetId):
 						lastTweetId = tweet.id
 				if 'next_token' in tweets.meta:

@@ -4,6 +4,7 @@ import re
 from dotenv import load_dotenv
 from datetime import datetime
 import sqlite3 as sl
+import time
 
 print("[" + str(datetime.now()) +  "] Begin.", flush=True)
 
@@ -33,12 +34,13 @@ def getKeywords():
 				#print("getKeywords : " + line)
 				screen_name = line[0:line.index('=')]
 				#print("screen_name: [" + screen_name + "]")
-				keyword = line[line.index('=') + 1:len(line)]
+				keywords = line[line.index('=') + 1:len(line)]
 				#print("keyword: [" + keyword + "]")
 				keywordList = []
 				if 'keywordList' in accountList[screen_name]:
 					keywordList = accountList[screen_name]['keywordList']
-				keywordList.append(keyword)
+				for keyword in keywords.split(","):
+					keywordList.append(keyword)
 				accountList[screen_name]['keywordList'] = keywordList
 	
 def retweetAndLike(screen_name, tweetId):
@@ -66,8 +68,8 @@ def processTweet(userTweet, retweet):
 				if 'keywordList' in accountList[screen_name]:
 					keywordList = accountList[screen_name]['keywordList']
 					for keyword in keywordList:
-						print("Processing: [" + str(screen_name) + "] keyword : [" + keyword + "] tweetText : [" + tweetText + "]")
-						if keyword.lower() in tweetText:
+						print("Processing: [" + str(screen_name) + "] keyword : [" + keyword + "] tweetText : [" + tweetText + "] tweet id : [" + str(tweet.id) + "]")
+						if keyword.lower() in tweetText.lower():
 							print("Found the keyword [" + keyword + "] in [" + tweetText + "], retweet this motha!")
 							retweetAndLike(screen_name, userTweet.id)
 
@@ -89,14 +91,16 @@ for accountToWatch in accountsToWatch:
 							access_token_secret=mainAccessToken_secret)
 	userId = client.get_user(username = accountToWatch)[0].id
 	lastTweetId = 0
+	initialRun = True
 	cur.execute("select last_tweet_id from users_latestest_tweet where screen_name = '" + accountToWatch + "';")
 	result = cur.fetchall()
 	if len(result) != 0:
 		#print ("executed : [" + "select last_tweet_id from users_latestest_tweet where screen_name = '" + accountToWatch + "'" + "]")
 		#print("result : [" + str(result[0][0]) + "]")
 		lastTweetId = result[0][0]
+		initialRun = False
 		#break
-	print("lastTweetId : [" + str(lastTweetId) + "]")
+	#print("lastTweetId : [" + str(lastTweetId) + "]")
 	paginationToken = None
 	while True:
 		try:
@@ -114,6 +118,7 @@ for accountToWatch in accountsToWatch:
 							#processTweet(client.get_tweet(referenced_tweet_id.id))
 							retweet = client.get_tweet(referenced_tweet_id.id).data
 					processTweet(tweet, retweet)
+					print("tweet.id : [" + str(tweet.id) + "] lastTweetId : [" + str(lastTweetId) + "]")
 					if int(tweet.id) > int(lastTweetId):
 						lastTweetId = tweet.id
 				if 'next_token' in tweets.meta:
@@ -122,7 +127,10 @@ for accountToWatch in accountsToWatch:
 					break
 			else:
 				print("Ran out of tweets")
-				sql = "INSERT INTO users_latestest_tweet (screen_name, last_tweet_id) values ('" + accountToWatch + "','" + str(lastTweetId) + "')"
+				if initialRun:
+					sql = "INSERT INTO users_latestest_tweet (screen_name, last_tweet_id) values ('" + accountToWatch + "','" + str(lastTweetId) + "')"
+				else:
+					sql = "UPDATE users_latestest_tweet set screen_name = '" + accountToWatch + "', last_tweet_id = '" + str(lastTweetId) + "'"
 				cur.execute(sql)
 				break
 		except tweepy.errors.TooManyRequests as e:

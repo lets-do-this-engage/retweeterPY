@@ -140,6 +140,9 @@ for accountToWatch in accountsToWatch:
 		except tweepy.errors.TweepyException as e:
 			print("[" + str(datetime.now()) +  "] Caught an exception: " + str(e), flush=True)
 			print("[" + str(datetime.now()) +  "] api_codes: " + str(e.api_codes), flush=True)
+		except:
+			e = sys.exc_info()[0]
+			print("[" + str(datetime.now()) +  "] sys.exc_info(): " + str(sys.exc_info()) + " Caught an exception: " + str(e), flush=True)
 #Clean up
 con.commit()
 cur.close()

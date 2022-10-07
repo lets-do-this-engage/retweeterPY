@@ -1,6 +1,6 @@
 #username=comma separated keywords list separated by newlines
 WorstFansMovies=#movies,#marvel,#starwars,#film,#cinema,#worstfansunite,WorstFansMovies
-WorstFansMusic=#music,#concert,#livemusic,#worstfansunite,WorstFansMusic
+WorstFansMusic=#music,#concert,#livemusic,#worstfansunite,WorstFansMusic,#worstfansmusic
 TheWorstFansTV=#tv,#marvel,#starwars,#worstfansunite,TheWorstFansTV
 WorstFansFood=#food,#worstfansunite,WorstFansFood
 WorstFansBets=WorstFansBets,#worstfansunite,#gambling,#bets,#betting,draftkings

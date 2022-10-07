@@ -83,7 +83,7 @@ cur.execute(sql)
 for accountToWatch in accountsToWatch:
 	print("Processing: [" + str(accountToWatch) + "]")
 	#set up API connection
-	print("[" + str(datetime.now()) +  "] Setting up API connection...", flush=True)
+	print("[" + str(datetime.now()) +  "] Setting up API connection for [" + accountToWatch + "]...", flush=True)
 	client = tweepy.Client(bearer_token=mainBearerToken, 
 							consumer_key=mainConsumerKey, 
 							consumer_secret=mainConsumerSecret, 

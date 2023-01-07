@@ -19,7 +19,7 @@ for envVar in os.environ:
 		accountList[envVar[0:envVar.index('.')]][envVar[envVar.index('.') + 1:]] = os.getenv(envVar)
 
 accountsToWatch = ['JTKirkmanWF', 'WFSly', 'WilsonWildingWF']
-mainScreenName = 'TheWorstFans'
+mainScreenName = 'WorstFansFood'
 mainConsumerKey= accountList[mainScreenName]['consumer_key']
 mainConsumerSecret= accountList[mainScreenName]['consumer_secret']
 mainAccessToken= accountList[mainScreenName]['access_token']
@@ -91,16 +91,16 @@ for accountToWatch in accountsToWatch:
 							access_token_secret=mainAccessToken_secret)
 	userId = client.get_user(username = accountToWatch)[0].id
 	lastTweetId = 0
-	initialRun = True
+	initialRun = False
 	cur.execute("select last_tweet_id from users_latestest_tweet where screen_name = '" + accountToWatch + "';")
 	result = cur.fetchall()
 	if len(result) != 0:
-		#print ("executed : [" + "select last_tweet_id from users_latestest_tweet where screen_name = '" + accountToWatch + "'" + "]")
-		#print("result : [" + str(result[0][0]) + "]")
+		print ("executed : [" + "select last_tweet_id from users_latestest_tweet where screen_name = '" + accountToWatch + "'" + "]")
+		print("result : [" + str(result[0][0]) + "]")
 		lastTweetId = result[0][0]
 		initialRun = False
 		#break
-	#print("lastTweetId : [" + str(lastTweetId) + "]")
+	print("lastTweetId : [" + str(lastTweetId) + "]")
 	paginationToken = None
 	while True:
 		try:
@@ -130,7 +130,8 @@ for accountToWatch in accountsToWatch:
 				if initialRun:
 					sql = "INSERT INTO users_latestest_tweet (screen_name, last_tweet_id) values ('" + accountToWatch + "','" + str(lastTweetId) + "')"
 				else:
-					sql = "UPDATE users_latestest_tweet set screen_name = '" + accountToWatch + "', last_tweet_id = '" + str(lastTweetId) + "'"
+					sql = "UPDATE users_latestest_tweet set last_tweet_id = '" + str(lastTweetId) + "' WHERE screen_name = '" + accountToWatch + "'"
+				print("sql : [" + sql + "]")
 				cur.execute(sql)
 				break
 		except tweepy.errors.TooManyRequests as e:
